@@ -12,12 +12,17 @@
 
 uint32_t COMM_TIMEOUT = 300;
 
+uint32_t KILL_ZONE_HI = 1700;
+uint32_t KILL_ZONE_LO = 1450;
+
 PinPulseIn<RC_STR_PIN> rcSteer;
 PinPulseIn<RC_TRTL_PIN> rcThrottle;
 
 Servo carSteer;
 Servo carThrottle;
 
+uint32_t steeringIn = 1500;
+uint32_t throttleIn = 1500;
 uint32_t steeringOut = 1500;
 uint32_t throttleOut = 1500;
 
@@ -52,35 +57,37 @@ void attachServos() {
     carSteer.attach(CAR_STR_PIN);
   }
   if (!carThrottle.attached()) {
-    carThrottle.attach(RC_TRTL_PIN);
+    carThrottle.attach(CAR_TRTL_PIN);
   }
 }
 
 int readSerialIfAvailable()
 {  
-  while (Serial.available() >= 3) {
-    char b = Serial.read();
-    
-    if (b == 'S') {
-      // Steering value in us
-      // S <steer>\n
-      steeringOut = Serial.parseInt();
-    }
-    else if (b == 'T') {
-      // Throttle value in us
-      // T <throttle>\n
-      throttleOut = Serial.parseInt();
-    }
-    
-    // Read the newline
-    do {
-      b = Serial.read();
-    }
-    while (b != '\n');
-    
-    lastSerialTime = millis();
-    hasSerial = true;
+  if (Serial.available() < 4) {
+    return;
   }
+
+  char b = Serial.read();
+  
+  if (b == 'S') {
+    // Steering value in us
+    // S<steer>\n
+    steeringOut = Serial.parseInt();
+  }
+  else if (b == 'T') {
+    // Throttle value in us
+    // T<throttle>\n
+    throttleOut = Serial.parseInt();
+  }
+  
+  // Read the newline
+  do {
+    b = Serial.read();
+  }
+  while (b != '\n');
+  
+  lastSerialTime = millis();
+  hasSerial = true;
 }
 
 void loop() {
@@ -107,22 +114,51 @@ void loop() {
   } else {
     attachServos();
     carSteer.writeMicroseconds(steeringOut);
-    carThrottle.writeMicroseconds(throttleOut);
+    uint32_t finalThrottle = maybeKilled();
+    carThrottle.writeMicroseconds(finalThrottle);
     ledOn();
   }
 
   if (rcSteer.hasValue()) {
+    steeringIn = rcSteer.getValue();
     Serial.print("S");
-    Serial.println(rcSteer.getValue());
+    Serial.println(steeringIn);
   }
   if (rcThrottle.hasValue()) {
+    throttleIn = rcThrottle.getValue();
     Serial.print("T");
-    Serial.println(rcThrottle.getValue());
+    Serial.println(throttleIn);
   }
 
   readSerialIfAvailable();
 }
 
+// "kill switch" is when throttle goes above KILL_ZONE_HI (high speed reverse)
+// Kill switch will be deactivated when throttle falls below KILL_ZONE_LOW (low speed forward)
+// When robot is "killed", it simply takes RC transmitter throttle input
+// Also remember that ESC needs "double reverses" - the 1st reverse serves as brake. When throttle
+//   goes back to neutral and goes into reverse zone again, it starts to reverse
+
+bool killed = false;
+
+uint32_t maybeKilled() {
+  if (throttleIn > KILL_ZONE_HI) {
+    killed = true;
+    return throttleIn;
+  }
+
+  if (throttleIn < KILL_ZONE_LO) {
+    killed = false;
+    return throttleOut;
+  }
+
+  // When throttleIn is between KILL_ZONE_LO and KILL_ZONE_HI
+  if (killed) {
+    return throttleIn;
+  } else {
+    return throttleOut;
+  }
+}
 
 // LED
 enum LED_STATUS {
