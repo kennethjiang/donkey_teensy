@@ -15,6 +15,8 @@ uint32_t COMM_TIMEOUT = 300;
 uint32_t KILL_ZONE_HI = 1700;
 uint32_t KILL_ZONE_LO = 1450;
 
+uint32_t CYCLE = 10; // 10ms cycle
+
 PinPulseIn<RC_STR_PIN> rcSteer;
 PinPulseIn<RC_TRTL_PIN> rcThrottle;
 
@@ -152,6 +154,12 @@ uint32_t maybeKilled() {
     return throttleOut;
   }
 
+  // fill the cycle
+  if ((lastCycleTime + CYCLE) > millis()) {
+    delay(lastCycleTime + CYCLE - millis());
+  }
+  lastCycleTime = millis();
+  
   // When throttleIn is between KILL_ZONE_LO and KILL_ZONE_HI
   if (killed) {
     return throttleIn;
