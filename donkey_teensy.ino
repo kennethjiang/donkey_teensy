@@ -132,6 +132,12 @@ void loop() {
     Serial.println(throttleIn);
   }
 
+  // fill the cycle
+  if ((lastCycleTime + CYCLE) > millis()) {
+    delay(lastCycleTime + CYCLE - millis());
+  }
+  lastCycleTime = millis();
+  
   readSerialIfAvailable();
 }
 
@@ -154,12 +160,6 @@ uint32_t maybeKilled() {
     return throttleOut;
   }
 
-  // fill the cycle
-  if ((lastCycleTime + CYCLE) > millis()) {
-    delay(lastCycleTime + CYCLE - millis());
-  }
-  lastCycleTime = millis();
-  
   // When throttleIn is between KILL_ZONE_LO and KILL_ZONE_HI
   if (killed) {
     return throttleIn;
