@@ -34,6 +34,8 @@ uint32_t lastRCTime = 0;
 bool hasSerial = false;
 uint32_t lastSerialTime = 0;
 
+uint32_t lastCycleTime = 0;
+
 void setup() {
   Serial.begin(115200);
   delay(500);
@@ -63,7 +65,7 @@ void attachServos() {
   }
 }
 
-int readSerialIfAvailable()
+void readSerialIfAvailable()
 {  
   if (Serial.available() < 4) {
     return;
