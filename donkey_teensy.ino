@@ -10,12 +10,12 @@
 #define CAR_STR_PIN 23
 #define CAR_TRTL_PIN 22
 
-uint32_t COMM_TIMEOUT = 300;
+uint32_t COMM_TIMEOUT = 1000;
 
 uint32_t KILL_ZONE_HI = 1700;
 uint32_t KILL_ZONE_LO = 1450;
 
-uint32_t CYCLE = 10; // 10ms cycle
+uint32_t CYCLE = 5; // 10ms cycle
 
 PinPulseIn<RC_STR_PIN> rcSteer;
 PinPulseIn<RC_TRTL_PIN> rcThrottle;
